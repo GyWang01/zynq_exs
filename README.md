@@ -1,0 +1,2 @@
+# zynq_exs
+使用zynq7000学习Linux嵌入式开发的练习项目
