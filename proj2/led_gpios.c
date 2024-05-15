@@ -29,7 +29,7 @@ int light_open(struct inode *inode,struct file *filp)
 	}
 	filp->private_data = (void *) lednum;
 
-	/* Allocating GPIOs and setting direction */
+	// 初始化gpio并配置方向
 	result = gpio_request(lednum, "Leds");
 	if (result != 0){
 		pr_err("gpio_request failed!\n");

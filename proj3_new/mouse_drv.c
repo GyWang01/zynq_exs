@@ -19,11 +19,14 @@ struct mpu_mouse_data {
 	int prev_button_state;
 };
 
-#define FILTER_ALPHA 50  // 定点数，表示 0.5 * 100
+#define FILTER_ALPHA 70  //  0.7 * FILTER_SCALE
 #define FILTER_SCALE 100
+#define ACCEL_SCALE (1 << 14) // 16384 for Q15 format
+#define AMPLIFY 30
 
 static int low_pass_filter(int prev_value, int current_value)
 {
+	//y[n]=α⋅x[n]+(1−α)⋅y[n−1]
 	return (FILTER_ALPHA * current_value + (FILTER_SCALE - FILTER_ALPHA) * prev_value) / FILTER_SCALE;
 }
 
@@ -31,32 +34,34 @@ static void mpu_mouse_poll_work(struct work_struct *work)
 {
 	struct mpu_mouse_data *mydevice = container_of(work, struct mpu_mouse_data, poll_work);
 	int accel_x, accel_y;
+	int16_t raw_accel_x, raw_accel_y;	// 保留符号
 	int filtered_x, filtered_y;
 	int button_state;
+	uint8_t buf[6];
 	
-	// Read accelerometer data (example register addresses)
-	accel_x = i2c_smbus_read_byte_data(mydevice->client, 0x3B);
-	accel_y = i2c_smbus_read_byte_data(mydevice->client, 0x3D);
-	
-	if (accel_x < 0 || accel_y < 0) {
-		dev_err(&mydevice->client->dev, "Failed to read sensor data\n");
-		return;
-	}
-	
+    // Read accelerometer data
+    i2c_smbus_read_i2c_block_data(mydevice->client, 0x3D, 2, buf);
+    raw_accel_x = (int16_t)((buf[0] << 8) | buf[1]);  
+    i2c_smbus_read_i2c_block_data(mydevice->client, 0x3B, 2, buf);
+    raw_accel_y = (int16_t)((buf[0] << 8) | buf[1]);
+
+	accel_x = -raw_accel_x * AMPLIFY / ACCEL_SCALE; 
+    accel_y = -raw_accel_y * AMPLIFY / ACCEL_SCALE; 
+
 	// Apply low-pass filter
 	filtered_x = low_pass_filter(mydevice->prev_accel_x, accel_x);
 	filtered_y = low_pass_filter(mydevice->prev_accel_y, accel_y);
-	
+
 	mydevice->prev_accel_x = filtered_x;
 	mydevice->prev_accel_y = filtered_y;
 	
 	// Convert accelerometer data to relative mouse movement
 	// Adjust conversion factor according to actual use case
-	input_report_rel(mydevice->input_dev, REL_X, filtered_x / 10); // Adjusted conversion
-	input_report_rel(mydevice->input_dev, REL_Y, filtered_y / 10); // Adjusted conversion
+	input_report_rel(mydevice->input_dev, REL_X, filtered_x); 
+	input_report_rel(mydevice->input_dev, REL_Y, filtered_y); 
 	
 	// Read button state
-	button_state = gpio_get_value(mydevice->io_down);
+	button_state = !gpio_get_value(mydevice->io_down);	// gpio按键的逻辑是反的
 	if (button_state != mydevice->prev_button_state) {
 		input_report_key(mydevice->input_dev, BTN_LEFT, button_state);
 		mydevice->prev_button_state = button_state;
@@ -74,10 +79,10 @@ static void mpu_mouse_timer_callback(struct timer_list *t)
 
 static int mpu_mouse_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
+	int error;
 	struct device_node *np = client->dev.of_node;
 	struct mpu_mouse_data *mydevice;
-	int error;
-	
+
 	mydevice = devm_kzalloc(&client->dev, sizeof(*mydevice), GFP_KERNEL);
 	if (!mydevice) {
 		dev_err(&client->dev, "No memory\n");
@@ -85,7 +90,7 @@ static int mpu_mouse_probe(struct i2c_client *client, const struct i2c_device_id
 	}
 	
 	mydevice->client = client;
-	i2c_set_clientdata(client, mydevice);
+	i2c_set_clientdata(client, mydevice);//将mydevice与client关联起来，以便后续可以通过client访问mydevice
 	
 	dev_alert(&client->dev, "MPU Address: 0x%02x\n", client->addr);
 	mydevice->io_down = of_get_named_gpio(np, "io_down", 0);
@@ -135,7 +140,7 @@ static int mpu_mouse_probe(struct i2c_client *client, const struct i2c_device_id
 	
 	timer_setup(&mydevice->poll_timer, mpu_mouse_timer_callback, 0);
 	INIT_WORK(&mydevice->poll_work, mpu_mouse_poll_work);
-	mod_timer(&mydevice->poll_timer, jiffies + msecs_to_jiffies(20));
+	mod_timer(&mydevice->poll_timer, jiffies + msecs_to_jiffies(10));
 	
 	return 0;
 }
@@ -164,7 +169,7 @@ static struct i2c_driver mpu_mouse_driver = {
 		.of_match_table = of_match_ptr(mpu_of_match),
 	},
 };
+		
 module_i2c_driver(mpu_mouse_driver);
-
 MODULE_DESCRIPTION("MPU6050 mouse driver");
 MODULE_LICENSE("GPL");

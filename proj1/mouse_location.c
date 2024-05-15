@@ -66,7 +66,7 @@ void read_mpu6000_data(int i2c_fd, int *x, int *y)
     int16_t ax, ay;
 
     // 初始化陀螺仪
-    ioctl(i2c_fd, I2C_SLAVE, GYRO_ADDR);
+    // ioctl(i2c_fd, I2C_SLAVE, GYRO_ADDR);
 
     // 读取加速度数据
     buf[0] = ACCEL_XOUT_H;

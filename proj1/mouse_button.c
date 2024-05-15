@@ -11,7 +11,7 @@
 
 int setup_gpio(int gpio) 
 {
-    char path[35];
+    char path[40];
     int fd;
 
     // 导出GPIO
@@ -21,6 +21,7 @@ int setup_gpio(int gpio)
         return -1;
     }
     snprintf(path, sizeof(path), "%d", gpio);
+	// 向/sys/class/gpio/export写入个gpio号，初始化gpio
     if (write(fd, path, strlen(path)) < 0) 
     {
         perror("Failed to export GPIO");
@@ -28,7 +29,6 @@ int setup_gpio(int gpio)
         return -1;
     }
     close(fd);
-
     // 设置GPIO为输入
     snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/direction", gpio);
     fd = open(path, O_WRONLY);
