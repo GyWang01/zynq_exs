@@ -1,0 +1,1 @@
+cmd_/home/emb-zynq/work/projs/proj2/button/button.ko := arm-xilinx-linux-gnueabi-ld -EL -r  -T ./scripts/module-common.lds --build-id  -o /home/emb-zynq/work/projs/proj2/button/button.ko /home/emb-zynq/work/projs/proj2/button/button.o /home/emb-zynq/work/projs/proj2/button/button.mod.o ;  true

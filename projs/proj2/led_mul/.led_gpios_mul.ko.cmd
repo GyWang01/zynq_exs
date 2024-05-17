@@ -1,0 +1,1 @@
+cmd_/home/emb-zynq/work/projs/proj2/led_mul/led_gpios_mul.ko := arm-xilinx-linux-gnueabi-ld -EL -r  -T ./scripts/module-common.lds --build-id  -o /home/emb-zynq/work/projs/proj2/led_mul/led_gpios_mul.ko /home/emb-zynq/work/projs/proj2/led_mul/led_gpios_mul.o /home/emb-zynq/work/projs/proj2/led_mul/led_gpios_mul.mod.o ;  true

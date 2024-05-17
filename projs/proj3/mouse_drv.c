@@ -39,34 +39,33 @@ static void mpu_mouse_poll_work(struct work_struct *work)
 	int button_state;
 	uint8_t buf[6];
 	
-    // Read accelerometer data
+    // 读陀螺仪数据
     i2c_smbus_read_i2c_block_data(mydevice->client, 0x3D, 2, buf);
     raw_accel_x = (int16_t)((buf[0] << 8) | buf[1]);  
     i2c_smbus_read_i2c_block_data(mydevice->client, 0x3B, 2, buf);
     raw_accel_y = (int16_t)((buf[0] << 8) | buf[1]);
 
 	accel_x = -raw_accel_x * AMPLIFY / ACCEL_SCALE; 
-    accel_y = -raw_accel_y * AMPLIFY / ACCEL_SCALE; 
+    accel_y = raw_accel_y * AMPLIFY / ACCEL_SCALE; 
 
-	// Apply low-pass filter
+	// 低通滤波
 	filtered_x = low_pass_filter(mydevice->prev_accel_x, accel_x);
 	filtered_y = low_pass_filter(mydevice->prev_accel_y, accel_y);
 
 	mydevice->prev_accel_x = filtered_x;
 	mydevice->prev_accel_y = filtered_y;
 	
-	// Convert accelerometer data to relative mouse movement
-	// Adjust conversion factor according to actual use case
+	// 上报鼠标位移事件
 	input_report_rel(mydevice->input_dev, REL_X, filtered_x); 
 	input_report_rel(mydevice->input_dev, REL_Y, filtered_y); 
 	
-	// Read button state
+	// 读按键、上报按键
 	button_state = !gpio_get_value(mydevice->io_down);	// gpio按键的逻辑是反的
 	if (button_state != mydevice->prev_button_state) {
 		input_report_key(mydevice->input_dev, BTN_LEFT, button_state);
 		mydevice->prev_button_state = button_state;
 	}
-	
+	// 同步事件
 	input_sync(mydevice->input_dev);
 }
 
@@ -74,7 +73,7 @@ static void mpu_mouse_timer_callback(struct timer_list *t)
 {
 	struct mpu_mouse_data *mydevice = from_timer(mydevice, t, poll_timer);
 	schedule_work(&mydevice->poll_work);
-	mod_timer(&mydevice->poll_timer, jiffies + msecs_to_jiffies(20)); // Polling every 20 ms
+	mod_timer(&mydevice->poll_timer, jiffies + msecs_to_jiffies(20)); // 20ms回调
 }
 
 static int mpu_mouse_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -173,3 +172,4 @@ static struct i2c_driver mpu_mouse_driver = {
 module_i2c_driver(mpu_mouse_driver);
 MODULE_DESCRIPTION("MPU6050 mouse driver");
 MODULE_LICENSE("GPL");
+

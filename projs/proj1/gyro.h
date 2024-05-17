@@ -10,6 +10,6 @@
 
 int setup_uinput_device();
 void send_mouse_location_event(int fd, int x, int y);
-void read_mpu6000_data(int , int *, int *);
+void read_mpu6050_data(int , int *, int *);
 
 #endif

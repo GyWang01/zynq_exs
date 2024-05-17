@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include "button.h"
 
+
 int setup_gpio(int gpio) 
 {
     char path[40];
@@ -88,7 +89,7 @@ void send_mouse_button_event(int fd, int button, int value)
 
 void test_send_button(int uinput_fd)
 {
-            // 检测并发送鼠标按键事件
+        // 检测并发送鼠标按键事件
         if (read_gpio(GPIO_BTN_LEFT) == 0) {
             send_mouse_button_event(uinput_fd, BTN_LEFT, 0); // 按下左键
             usleep(100000); // 等待100ms

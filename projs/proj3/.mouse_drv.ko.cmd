@@ -1,0 +1,1 @@
+cmd_/home/emb-zynq/work/proj3_new/mouse_drv.ko := arm-xilinx-linux-gnueabi-ld -EL -r  -T ./scripts/module-common.lds --build-id  -o /home/emb-zynq/work/proj3_new/mouse_drv.ko /home/emb-zynq/work/proj3_new/mouse_drv.o /home/emb-zynq/work/proj3_new/mouse_drv.mod.o ;  true
